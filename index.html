@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Subway Announcement Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+        .fas, .fab, .far { vertical-align: middle; }
+        #audioPlayer { display: none; } /* Hide the audio player element */
+    </style>
+</head>
+<body class="bg-gray-100">
+    <audio id="audioPlayer"></audio>
+
+    <div class="min-h-screen p-6">
+        <header class="max-w-5xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h1 class="text-3xl font-extrabold flex items-center gap-3 text-gray-900">
+                <i class="fas fa-train"></i> NYC Subway Announcement Generator
+            </h1>
+            <a
+                href="https://ko-fi.com/normanmei" 
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-black font-bold px-4 py-2 rounded shadow"
+            >
+                <i class="fas fa-coffee"></i> Support on Ko-fi
+            </a>
+        </header>
+
+        <main class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Controls Section -->
+            <section class="md:col-span-1 bg-white p-4 rounded shadow">
+                <h2 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                    <i class="fas fa-map-marked-alt"></i> Select Train Model
+                </h2>
+                <select id="trainModelSelect" class="w-full p-2 border rounded">
+                </select>
+
+                <h2 class="text-xl font-semibold mt-6 mb-3 flex items-center gap-2">
+                    <i class="fas fa-map-marked-alt"></i> Select Route
+                </h2>
+                <div id="routeButtonsContainer" class="flex gap-2 flex-wrap">
+                    <p id="loadingRoutesMsg">Loading routes...</p>
+                </div>
+
+                <div id="customRouteSection" class="mt-4" style="display: none;">
+                    <h3 class="font-semibold mb-2">Add Stations to Custom Route</h3>
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="newStationNameInput"
+                            placeholder="Station name"
+                            class="flex-grow p-2 border rounded"
+                        />
+                        <button
+                            id="addStationButton"
+                            class="bg-blue-600 text-white px-4 rounded hover:bg-blue-700 flex items-center justify-center"
+                        >
+                            <i class="fas fa-plus"></i> <span class="ml-2 sm:inline hidden">Add</span>
+                        </button>
+                    </div>
+                    <ul id="customStationsList" class="mt-3 max-h-48 overflow-auto border rounded p-2 custom-scrollbar">
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Announcement Generator Section -->
+            <section class="md:col-span-1 bg-white p-4 rounded shadow flex flex-col">
+                <h2 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                    <i class="fas fa-bullhorn"></i> Announcement Generator
+                </h2>
+                <div class="mb-3">
+                    <label class="block font-semibold mb-1">Announcement Type</label>
+                    <select id="announcementTypeSelect" class="w-full p-2 border rounded">
+                        <option value="arrival">Arrival</option>
+                        <option value="delay">Delay</option>
+                        <option value="reroute">Reroute</option>
+                        <option value="custom">Custom (Text Only)</option>
+                    </select>
+                </div>
+
+                <div id="stationSelectContainer" class="mb-3">
+                    <label class="block font-semibold mb-1">Select Station</label>
+                    <select id="announcementStationSelect" class="w-full p-2 border rounded">
+                    </select>
+                </div>
+
+                <div id="customAnnouncementTextContainer" class="mb-3" style="display: none;">
+                    <label class="block font-semibold mb-1">Custom Announcement Text</label>
+                    <textarea
+                        id="customAnnouncementTextArea"
+                        class="w-full p-2 border rounded"
+                        rows="4"
+                        placeholder="Enter your custom announcement here"
+                    ></textarea>
+                </div>
+
+                <button
+                    id="generateAnnouncementButton"
+                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mt-auto"
+                >
+                    Generate Announcement
+                </button>
+
+                <div id="announcementOutputContainer" class="mt-4 p-3 border rounded bg-white text-black" style="display: none;">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-semibold">Generated Announcement</h3>
+                        <button id="playAnnouncementButton" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm items-center gap-1" style="display:none;">
+                            <i class="fas fa-play"></i> Play
+                        </button>
+                    </div>
+                    <p id="announcementText"></p>
+                </div>
+            </section>
+
+            <!-- Strip Map Display Section -->
+            <section class="md:col-span-1 bg-white p-4 rounded shadow">
+                <h2 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                    <i class="fas fa-map-marked-alt"></i> Strip Map Display
+                </h2>
+                <div id="stripMapContainer">
+                </div>
+            </section>
+        </main>
+
+        <footer class="max-w-5xl mx-auto mt-10 text-center text-gray-600">
+            <p>© 2024 NYC Subway Announcement Generator. Built with care.</p>
+        </footer>
+    </div>
+
+<script>
+    const TRAIN_MODELS = {
+      'R62/A': { type: 'paper', color: 'bg-yellow-100' },
+      'R142/A': { type: 'digital', color: 'bg-gray-900' },
+      'R143': { type: 'digital', color: 'bg-gray-900' },
+      'R188': { type: 'digital', color: 'bg-gray-900' },
+      'R160A/B': { type: 'FIND', color: 'bg-blue-900' },
+      'R179': { type: 'FIND', color: 'bg-blue-900' },
+      'R211A/T': { type: 'FCSD', color: 'bg-black' }
+    };
+
+    let SUGGESTED_ROUTES = []; // Will be populated from data.json
+
+    // State variables
+    let selectedModelKey = 'R142/A';
+    let selectedRouteObject = null; 
+    let customRouteObject = { id: 'custom', name: 'Custom', color: 'bg-blue-600', stations: [] };
+    let isCustomModeActive = false;
+    let generatedAnnouncement = null; // Will store { text: "...", audioQueue: [] }
+    let newStationNameValue = ''; // Not needed globally if input read directly
+    let selectedStationIndexForStripMap = null;
+    let selectedStationIndexForAnnouncement = null;
+    let announcementTypeValue = 'arrival';
+    // let customAnnouncementTextValue = ''; // Not needed globally
+
+    // DOM Elements
+    const trainModelSelect = document.getElementById('trainModelSelect');
+    const routeButtonsContainer = document.getElementById('routeButtonsContainer');
+    const loadingRoutesMsg = document.getElementById('loadingRoutesMsg');
+    const customRouteSection = document.getElementById('customRouteSection');
+    const newStationNameInput = document.getElementById('newStationNameInput');
+    const addStationButton = document.getElementById('addStationButton');
+    const customStationsList = document.getElementById('customStationsList');
+    
+    const announcementTypeSelect = document.getElementById('announcementTypeSelect');
+    const stationSelectContainer = document.getElementById('stationSelectContainer');
+    const announcementStationSelect = document.getElementById('announcementStationSelect');
+    const customAnnouncementTextContainer = document.getElementById('customAnnouncementTextContainer');
+    const customAnnouncementTextArea = document.getElementById('customAnnouncementTextArea');
+    const generateAnnouncementButton = document.getElementById('generateAnnouncementButton');
+    const announcementOutputContainer = document.getElementById('announcementOutputContainer');
+    const announcementTextElement = document.getElementById('announcementText');
+    const playAnnouncementButton = document.getElementById('playAnnouncementButton');
+    const stripMapContainer = document.getElementById('stripMapContainer');
+    const audioPlayer = document.getElementById('audioPlayer');
+    let currentAudioQueue = [];
+    let currentAudioIndex = 0;
+
+    function sanitizeForFilename(name) {
+        if (!name) return '';
+        return name.replace(/[^a-zA-Z0-9\s_-]/g, '').replace(/\s+/g, '_');
+    }
+
+    function getCurrentRoute() {
+        return isCustomModeActive ? customRouteObject : selectedRouteObject;
+    }
+    
+    async function fetchRouteData() {
+        try {
+            const response = await fetch('data.json');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            SUGGESTED_ROUTES = await response.json();
+            if (SUGGESTED_ROUTES.length > 0) {
+                selectedRouteObject = SUGGESTED_ROUTES[0]; // Default selection
+            } else {
+                 selectedRouteObject = {id: 'error', name:'Error', color: 'bg-red-500', stations: [{id:'err', name:'Could not load routes'}]};
+            }
+            loadingRoutesMsg.style.display = 'none';
+        } catch (error) {
+            console.error("Could not load route data:", error);
+            loadingRoutesMsg.textContent = 'Error loading routes. Please try again later.';
+            selectedRouteObject = {id: 'error', name:'Error', color: 'bg-red-500', stations: [{id:'err', name:'Could not load routes'}]};
+        }
+    }
+
+    function populateTrainModelSelect() {
+        trainModelSelect.innerHTML = '';
+        Object.keys(TRAIN_MODELS).forEach(modelKey => {
+            const option = document.createElement('option');
+            option.value = modelKey;
+            option.textContent = modelKey;
+            if (modelKey === selectedModelKey) option.selected = true;
+            trainModelSelect.appendChild(option);
+        });
+    }
+
+    function renderRouteButtons() {
+        routeButtonsContainer.innerHTML = ''; // Clear previous buttons/loading message
+        if (!SUGGESTED_ROUTES || SUGGESTED_ROUTES.length === 0) {
+             routeButtonsContainer.innerHTML = '<p>No routes available.</p>'; return;
+        }
+
+        SUGGESTED_ROUTES.forEach(route => {
+            const button = document.createElement('button');
+            button.textContent = route.name;
+            const isActive = selectedRouteObject && selectedRouteObject.id === route.id && !isCustomModeActive;
+            button.className = `px-3 py-1 rounded font-semibold text-white transition-colors ${
+                isActive ? route.color : 'bg-gray-400 hover:bg-gray-500'
+            }`;
+            button.onclick = () => {
+                selectedRouteObject = route;
+                isCustomModeActive = false;
+                selectedStationIndexForStripMap = null;
+                selectedStationIndexForAnnouncement = null;
+                generatedAnnouncement = null;
+                updateUI();
+            };
+            routeButtonsContainer.appendChild(button);
+        });
+
+        const customButton = document.createElement('button');
+        customButton.textContent = 'Custom';
+        customButton.className = `px-3 py-1 rounded font-semibold text-white transition-colors ${
+            isCustomModeActive ? customRouteObject.color : 'bg-gray-400 hover:bg-gray-500'
+        }`;
+        customButton.onclick = () => {
+            isCustomModeActive = true;
+            selectedStationIndexForStripMap = null;
+            selectedStationIndexForAnnouncement = null;
+            generatedAnnouncement = null;
+            updateUI();
+        };
+        routeButtonsContainer.appendChild(customButton);
+    }
+
+    function renderCustomStationsList() {
+        customStationsList.innerHTML = '';
+        if (customRouteObject.stations.length === 0) {
+            customStationsList.innerHTML = '<li class="text-gray-500">No stations added yet.</li>';
+            return;
+        }
+        customRouteObject.stations.forEach((station, index) => {
+            const li = document.createElement('li');
+            li.className = 'flex justify-between items-center py-1';
+            li.innerHTML = `
+                <span>${station.name}</span>
+                <button class="text-red-600 hover:text-red-800 remove-station-btn" data-index="${index}" title="Remove station">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            customStationsList.appendChild(li);
+        });
+        document.querySelectorAll('.remove-station-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const indexToRemove = parseInt(e.currentTarget.dataset.index);
+                customRouteObject.stations = customRouteObject.stations.filter((_, i) => i !== indexToRemove);
+                 if (selectedStationIndexForStripMap !== null && selectedStationIndexForStripMap >= customRouteObject.stations.length) {
+                     selectedStationIndexForStripMap = customRouteObject.stations.length > 0 ? customRouteObject.stations.length -1 : null;
+                }
+                 if (selectedStationIndexForAnnouncement !== null && selectedStationIndexForAnnouncement >= customRouteObject.stations.length) {
+                     selectedStationIndexForAnnouncement = customRouteObject.stations.length > 0 ? customRouteObject.stations.length -1 : null;
+                }
+                updateUI();
+            });
+        });
+    }
+    
+    function handleAddStation() {
+        const name = newStationNameInput.value.trim();
+        if (name) {
+            customRouteObject.stations.push({ id: `custom-${Date.now()}`, name: name });
+            newStationNameInput.value = '';
+            updateUI();
+        }
+    }
+
+    function populateAnnouncementStationSelect() {
+        const currentRoute = getCurrentRoute();
+        announcementStationSelect.innerHTML = '<option value="">-- Select Station --</option>';
+        if (currentRoute && currentRoute.stations) {
+            currentRoute.stations.forEach((station, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = station.name;
+                if (selectedStationIndexForAnnouncement === index) option.selected = true;
+                announcementStationSelect.appendChild(option);
+            });
+        }
+        announcementStationSelect.value = selectedStationIndexForAnnouncement !== null ? selectedStationIndexForAnnouncement : "";
+    }
+
+    function handleGenerateAnnouncement() {
+        const currentRoute = getCurrentRoute();
+        if (!currentRoute) { alert("No route selected."); return; }
+
+        if (announcementTypeValue !== 'custom' && (selectedStationIndexForAnnouncement === null || selectedStationIndexForAnnouncement >= currentRoute.stations.length)) {
+            alert("Please select a station for the announcement.");
+            return;
+        }
+
+        let text = '';
+        let audioQueue = [];
+        const station = (announcementTypeValue !== 'custom' && currentRoute.stations && currentRoute.stations.length > 0) 
+                        ? currentRoute.stations[selectedStationIndexForAnnouncement || 0] 
+                        : null;
+
+        switch (announcementTypeValue) {
+            case 'arrival':
+                if (!station) { text = "No station selected for arrival."; break; }
+                const nextStation = currentRoute.stations[selectedStationIndexForAnnouncement + 1];
+                text = `This is ${station.name}. ${station.transfers ? `Transfer is available to the ${station.transfers.join(', ')}.` : ''} The next stop is ${nextStation?.name || 'the last stop'}.`;
+                
+                audioQueue.push('sounds/phrases/this_is.mp3');
+                audioQueue.push(`sounds/stations/${sanitizeForFilename(station.name)}.mp3`);
+                if (station.transfers && station.transfers.length > 0) {
+                    audioQueue.push('sounds/phrases/transfer_is_available_to_the.mp3');
+                    station.transfers.forEach((transfer, i) => {
+                        audioQueue.push(`sounds/routes/${sanitizeForFilename(transfer)}.mp3`);
+                        if (i < station.transfers.length - 1) {
+                            audioQueue.push('sounds/conjunctions/and.mp3'); // Or handle commas differently
+                        }
+                    });
+                     audioQueue.push('sounds/phrases/trains.mp3'); // e.g. "4, 5, and 6 trains"
+                }
+                audioQueue.push('sounds/phrases/the_next_stop_is.mp3');
+                if (nextStation) {
+                    audioQueue.push(`sounds/stations/${sanitizeForFilename(nextStation.name)}.mp3`);
+                } else {
+                    audioQueue.push('sounds/phrases/the_last_stop.mp3');
+                }
+                break;
+            case 'delay':
+                text = `Ladies and gentlemen, we are being held momentarily by train traffic ahead of us. We expect to be moving shortly.`;
+                audioQueue.push('sounds/phrases/delay_standard_message.mp3');
+                break;
+            case 'reroute':
+                text = `Attention passengers, due to signal problems, this ${currentRoute.name} train is running on the local track. We apologize for any inconvenience.`;
+                audioQueue.push('sounds/phrases/reroute_attention_passengers.mp3');
+                audioQueue.push('sounds/phrases/reroute_due_to_signal_problems.mp3');
+                audioQueue.push('sounds/phrases/this.mp3');
+                audioQueue.push(`sounds/routes/${sanitizeForFilename(currentRoute.name)}.mp3`);
+                audioQueue.push('sounds/phrases/train_service.mp3'); // "train" or "service"
+                audioQueue.push('sounds/phrases/reroute_is_running_on_local_track.mp3');
+                audioQueue.push('sounds/phrases/reroute_we_apologize.mp3');
+                break;
+            case 'custom':
+                text = customAnnouncementTextArea.value;
+                // No audio for custom text, as it's not pre-recorded
+                audioQueue = []; 
+                break;
+        }
+        generatedAnnouncement = { text, audioQueue };
+        updateUI();
+    }
+
+    function playNextInQueue() {
+        if (currentAudioIndex < currentAudioQueue.length) {
+            audioPlayer.src = currentAudioQueue[currentAudioIndex];
+            audioPlayer.play().catch(error => {
+                console.error(`Error playing ${audioPlayer.src}:`, error);
+                currentAudioIndex++; // Skip to next
+                playNextInQueue();
+            });
+            currentAudioIndex++;
+        } else {
+            playAnnouncementButton.innerHTML = '<i class="fas fa-play"></i> Play';
+            playAnnouncementButton.disabled = false;
+        }
+    }
+
+    audioPlayer.onended = () => {
+        playNextInQueue();
+    };
+    
+    audioPlayer.onerror = (e) => {
+        console.error(`Audio player error for ${audioPlayer.currentSrc}:`, e);
+        // Try to play the next sound in queue if one exists
+        if(currentAudioIndex < currentAudioQueue.length) {
+             playNextInQueue();
+        } else {
+            playAnnouncementButton.innerHTML = '<i class="fas fa-play"></i> Play';
+            playAnnouncementButton.disabled = false;
+            alert(`Could not play ${audioPlayer.currentSrc}. Check console for errors and if file exists.`);
+        }
+    };
+
+
+    playAnnouncementButton.addEventListener('click', () => {
+        if (generatedAnnouncement && generatedAnnouncement.audioQueue && generatedAnnouncement.audioQueue.length > 0) {
+            currentAudioQueue = generatedAnnouncement.audioQueue;
+            currentAudioIndex = 0;
+            playAnnouncementButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Playing...';
+            playAnnouncementButton.disabled = true;
+            playNextInQueue();
+        }
+    });
+
+
+    function renderStripMap() {
+        stripMapContainer.innerHTML = '';
+        const model = TRAIN_MODELS[selectedModelKey];
+        const currentRoute = getCurrentRoute();
+
+        if (!currentRoute || !currentRoute.stations) { // Check if currentRoute and its stations are defined
+            stripMapContainer.innerHTML = '<p>No route data to display strip map.</p>';
+            return;
+        }
+
+        const baseClasses = 'rounded-lg p-4 shadow-lg';
+        let html = '';
+        // ... (rest of the strip map rendering logic remains the same as previous version)
+        if (model.type === 'paper') {
+            html = `
+                <div class="${baseClasses} ${model.color} border-4 border-yellow-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full ${currentRoute.color} flex items-center justify-center text-white font-bold">
+                                ${currentRoute.name}
+                            </div>
+                            <span class="text-black font-bold">Local</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${currentRoute.stations.map((station, index) => `
+                            <button
+                                data-index="${index}"
+                                class="strip-map-station px-3 py-1 rounded border-2 border-black text-xs font-medium transition-colors ${
+                                selectedStationIndexForStripMap === index
+                                    ? 'bg-black text-white'
+                                    : 'bg-white text-black hover:bg-gray-200'
+                                }"
+                            >
+                                ${station.name}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else if (model.type === 'digital') {
+            html = `
+                <div class="${baseClasses} ${model.color} text-white">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full ${currentRoute.color} flex items-center justify-center text-white font-bold text-lg">
+                                ${currentRoute.name}
+                            </div>
+                            <span class="text-orange-400 font-mono text-lg">LOCAL</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        ${currentRoute.stations.map((station, index) => `
+                            <button
+                                data-index="${index}"
+                                class="strip-map-station w-full text-left px-3 py-2 rounded transition-colors font-mono text-sm ${
+                                selectedStationIndexForStripMap === index
+                                    ? 'bg-orange-400 text-black'
+                                    : 'hover:bg-gray-800'
+                                }"
+                            >
+                                <span class="text-orange-400">•</span> ${station.name}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else if (model.type === 'FIND') {
+             html = `
+                <div class="${baseClasses} ${model.color} text-white">
+                    <div class="bg-blue-800 p-3 rounded-t-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded ${currentRoute.color} flex items-center justify-center text-white font-bold text-xl">
+                                    ${currentRoute.name}
+                                </div>
+                                <div>
+                                    <div class="text-yellow-300 font-bold">LOCAL SERVICE</div>
+                                    <div class="text-xs">FIND Display System</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-black p-4 rounded-b-lg">
+                        <div class="grid grid-cols-2 gap-2">
+                            ${currentRoute.stations.map((station, index) => `
+                                <button
+                                    data-index="${index}"
+                                    class="strip-map-station px-2 py-1 rounded text-sm transition-colors ${
+                                    selectedStationIndexForStripMap === index
+                                        ? 'bg-yellow-400 text-black'
+                                        : 'hover:bg-gray-800'
+                                    }"
+                                >
+                                    ${station.name}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (model.type === 'FCSD') {
+            html = `
+                <div class="${baseClasses} ${model.color} text-white">  
+                    <div class="bg-black p-3 rounded-t-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-14 h-14 rounded ${currentRoute.color} flex items-center justify-center text-white font-bold text-2xl">
+                                    ${currentRoute.name}
+                                </div>
+                                <div>
+                                    <div class="text-red-500 font-bold">FCSD Display</div>
+                                    <div class="text-xs">Fully Computerized Strip Display</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-b-lg">
+                        <ul class="list-disc list-inside space-y-1">
+                            ${currentRoute.stations.map((station, index) => `
+                                <li
+                                    data-index="${index}"
+                                    class="strip-map-station cursor-pointer transition-colors ${
+                                    selectedStationIndexForStripMap === index ? 'text-red-400 font-bold' : 'hover:text-red-300'
+                                    }"
+                                >
+                                    ${station.name}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        stripMapContainer.innerHTML = html;
+        document.querySelectorAll('.strip-map-station').forEach(btn => {
+             btn.addEventListener('click', (e) => {
+                selectedStationIndexForStripMap = parseInt(e.currentTarget.dataset.index);
+                if (announcementTypeValue !== 'custom') {
+                    selectedStationIndexForAnnouncement = selectedStationIndexForStripMap;
+                }
+                updateUI();
+            });
+        });
+    }
+
+    function updateAnnouncementSectionVisibility() {
+        if (announcementTypeValue === 'custom') {
+            stationSelectContainer.style.display = 'none';
+            customAnnouncementTextContainer.style.display = 'block';
+            playAnnouncementButton.style.display = 'none'; // No audio for custom text
+        } else {
+            stationSelectContainer.style.display = 'block';
+            customAnnouncementTextContainer.style.display = 'none';
+            if (generatedAnnouncement && generatedAnnouncement.audioQueue && generatedAnnouncement.audioQueue.length > 0) {
+                playAnnouncementButton.style.display = 'flex';
+            } else {
+                playAnnouncementButton.style.display = 'none';
+            }
+        }
+
+        if (generatedAnnouncement) {
+            announcementTextElement.textContent = generatedAnnouncement.text;
+            announcementOutputContainer.style.display = 'block';
+        } else {
+            announcementOutputContainer.style.display = 'none';
+            playAnnouncementButton.style.display = 'none';
+        }
+    }
+    
+    function updateUI() {
+        customRouteSection.style.display = isCustomModeActive ? 'block' : 'none';
+        
+        renderRouteButtons(); 
+        if(isCustomModeActive) renderCustomStationsList();
+        populateAnnouncementStationSelect();
+        updateAnnouncementSectionVisibility();
+        renderStripMap();
+    }
+
+    // Event Listeners (mostly same, with minor adjustments for async data loading)
+    trainModelSelect.addEventListener('change', (e) => {
+        selectedModelKey = e.target.value;
+        renderStripMap(); 
+    });
+
+    addStationButton.addEventListener('click', handleAddStation);
+    newStationNameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAddStation();
+    });
+
+    announcementTypeSelect.addEventListener('change', (e) => {
+        announcementTypeValue = e.target.value;
+        generatedAnnouncement = null; 
+        updateUI();
+    });
+    
+    announcementStationSelect.addEventListener('change', (e) => {
+        selectedStationIndexForAnnouncement = e.target.value === '' ? null : Number(e.target.value);
+        if (selectedStationIndexForAnnouncement !== null) {
+            selectedStationIndexForStripMap = selectedStationIndexForAnnouncement;
+        }
+        updateUI(); 
+    });
+
+    // customAnnouncementTextArea input handled directly in generateAnnouncement
+
+    generateAnnouncementButton.addEventListener('click', handleGenerateAnnouncement);
+
+    // Initial Setup
+    async function initializeApp() {
+        populateTrainModelSelect();
+        await fetchRouteData(); // Load data from JSON
+        updateUI(); // Initial full UI render after data is loaded
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeApp);
+
+</script>
+
+</body>
+</html>
